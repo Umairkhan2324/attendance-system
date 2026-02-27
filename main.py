@@ -1,5 +1,5 @@
 """
-Face Recognition Attendance System — FastAPI Entry Point
+Attendance System — FastAPI Entry Point
 Run with: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 """
 
@@ -19,8 +19,7 @@ from app.db.oracle import OracleDB
 setup_logger()
 logger = logging.getLogger(__name__)
 
-# Shared service instances (attached to app.state)
-mqtt_service: MQTTService = None
+mqtt_service: MQTTService | None = None
 
 
 @asynccontextmanager
@@ -30,31 +29,34 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting up Attendance System...")
 
-    # Connect to Oracle DB and load encodings
-    db = OracleDB(settings.oracle)
-    db.connect()
-    db.load_encodings()
-    app.state.db = db
+    db: OracleDB | None = None
+    try:
+        db = OracleDB(settings.oracle)
+        db.connect()
+        app.state.db = db
+        logger.info("Oracle DB connected for employee management.")
+    except Exception as exc:
+        logger.error("Oracle DB unavailable; continuing without DB: %s", exc)
+        app.state.db = None
 
-    # Start MQTT service in background
-    mqtt_service = MQTTService(settings.mqtt, db, settings.face, settings.excel)
+    mqtt_service = MQTTService(settings.mqtt, db, settings.excel)
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, mqtt_service.start)
     app.state.mqtt = mqtt_service
 
-    logger.info("System is live and listening for camera frames.")
+    logger.info("System is live and listening for MQTT attendance events.")
     yield
 
-    # Shutdown
     logger.info("Shutting down...")
     if mqtt_service:
         mqtt_service.stop()
-    db.close()
+    if db is not None:
+        db.close()
 
 
 app = FastAPI(
-    title="Face Recognition Attendance System",
-    description="MQTT-based face recognition attendance tracker with Oracle DB and Excel export.",
+    title="Attendance System",
+    description="MQTT-based attendance tracker with Excel export.",
     version="1.0.0",
     lifespan=lifespan,
 )

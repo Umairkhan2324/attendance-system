@@ -1,4 +1,4 @@
-"""app/services/mqtt_service.py — MQTT client that receives frames and triggers face verification."""
+"""app/services/mqtt_service.py — MQTT client that receives attendance events and logs to Excel."""
 
 import json
 import logging
@@ -7,9 +7,8 @@ import threading
 
 import paho.mqtt.client as mqtt
 
-from app.core.config import MQTTConfig, FaceConfig, ExcelConfig
+from app.core.config import MQTTConfig, ExcelConfig
 from app.db.oracle import OracleDB
-from app.services.face_service import FaceService
 from app.services.excel_service import ExcelService
 
 logger = logging.getLogger(__name__)
@@ -20,12 +19,10 @@ class MQTTService:
         self,
         mqtt_config: MQTTConfig,
         db: OracleDB,
-        face_config: FaceConfig,
         excel_config: ExcelConfig,
     ):
         self.config = mqtt_config
         self.db = db
-        self.face_svc = FaceService(db, face_config)
         self.excel_svc = ExcelService(excel_config)
 
         self.client = mqtt.Client(client_id="attendance_fastapi_server")
@@ -41,7 +38,7 @@ class MQTTService:
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
-        # Background thread to reload DB encodings every 5 minutes
+        # Keep hook for potential future background work (e.g., DB sync)
         self._reload_thread = threading.Thread(
             target=self._reload_loop, daemon=True
         )
@@ -66,43 +63,38 @@ class MQTTService:
         logger.warning(f"MQTT disconnected (rc={rc}). Will auto-reconnect...")
 
     def _on_message(self, client, userdata, msg):
-        logger.debug(f"Frame received | topic={msg.topic} | size={len(msg.payload)}B")
+        logger.debug(
+            f"MQTT message received | topic={msg.topic} | size={len(msg.payload)}B"
+        )
         try:
-            image = self.face_svc.decode_image(msg.payload)
-            matches = self.face_svc.verify(image)
+            data = json.loads(msg.payload.decode("utf-8"))
 
-            if not matches:
-                self._publish({"status": "no_match", "message": "No recognized face in frame."})
-                return
+            emp_code = data.get("employee_code")
+            if not emp_code:
+                raise ValueError("MQTT payload missing 'employee_code'.")
 
-            for match in matches:
-                emp_code = match["employee_code"]
+            emp_name = data.get("employee_name") or data.get("person") or ""
+            present_flag = data.get("present", True)
+            status_str = "Present" if present_flag else "Absent"
 
-                if self.face_svc.is_on_cooldown(emp_code):
-                    logger.info(f"Cooldown active for {emp_code}. Skipping.")
-                    continue
+            date_str, time_str = self.excel_svc.log(emp_code, emp_name, status=status_str)
 
-                emp_name = match["employee_name"]
-                date_str, time_str = self.excel_svc.log(emp_code, emp_name)
-                self.face_svc.set_cooldown(emp_code)
+            record = {
+                "status": "logged",
+                "employee_code": emp_code,
+                "employee_name": emp_name,
+                "date": date_str,
+                "time": time_str,
+                "presence": bool(present_flag),
+            }
 
-                record = {
-                    "status": "verified",
-                    "employee_code": emp_code,
-                    "employee_name": emp_name,
-                    "date": date_str,
-                    "time": time_str,
-                    "confidence": match["confidence"],
-                }
+            with self._lock:
+                self._last_detection = f"{date_str} {time_str}"
+                self._recent_logs.append(record)
+                if len(self._recent_logs) > 100:
+                    self._recent_logs.pop(0)
 
-                with self._lock:
-                    self._last_detection = f"{date_str} {time_str}"
-                    self._recent_logs.append(record)
-                    # Keep only last 100 in memory
-                    if len(self._recent_logs) > 100:
-                        self._recent_logs.pop(0)
-
-                self._publish(record)
+            self._publish(record)
 
         except Exception as e:
             logger.error(f"Frame processing error: {e}", exc_info=True)
@@ -116,13 +108,9 @@ class MQTTService:
         self.client.publish(self.config.topic_result, json.dumps(payload))
 
     def _reload_loop(self):
+        # No-op placeholder; kept to avoid breaking existing threading setup.
         while True:
             time.sleep(300)
-            try:
-                logger.info("Reloading employee encodings from Oracle DB...")
-                self.db.load_encodings()
-            except Exception as e:
-                logger.error(f"Reload failed: {e}")
 
     # ─────────────────────────────────────────
     #  Lifecycle

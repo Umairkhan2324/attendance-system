@@ -1,0 +1,31 @@
+2026-02-27 17:35:53 [INFO] main — Starting up Attendance System...
+2026-02-27 17:35:56 [ERROR] app.db.oracle — Oracle DB connection error: [Errno 11001] getaddrinfo failed
+2026-02-27 17:37:21 [INFO] main — Starting up Attendance System...
+2026-02-27 17:37:23 [ERROR] app.db.oracle — Oracle DB connection error: [Errno 11001] getaddrinfo failed
+2026-02-27 17:37:23 [ERROR] main — Oracle DB unavailable; continuing without DB: [Errno 11001] getaddrinfo failed
+2026-02-27 17:37:23 [INFO] app.services.excel_service — Created Excel file: attendance_log.xlsx
+2026-02-27 17:37:23 [INFO] main — System is live and listening for MQTT attendance events.
+2026-02-27 17:37:24 [INFO] main — Shutting down...
+2026-02-27 17:37:24 [INFO] app.services.mqtt_service — MQTT service stopped.
+2026-02-27 17:37:28 [ERROR] app.services.mqtt_service — MQTT loop error: timed out
+2026-02-27 17:37:30 [INFO] main — Starting up Attendance System...
+2026-02-27 17:37:33 [ERROR] app.db.oracle — Oracle DB connection error: [Errno 11001] getaddrinfo failed
+2026-02-27 17:37:33 [ERROR] main — Oracle DB unavailable; continuing without DB: [Errno 11001] getaddrinfo failed
+2026-02-27 17:37:33 [INFO] main — System is live and listening for MQTT attendance events.
+2026-02-27 17:37:33 [INFO] main — Shutting down...
+2026-02-27 17:37:33 [INFO] app.services.mqtt_service — MQTT service stopped.
+2026-02-27 17:37:38 [ERROR] app.services.mqtt_service — MQTT loop error: timed out
+2026-02-27 17:37:39 [INFO] main — Starting up Attendance System...
+2026-02-27 17:37:42 [ERROR] app.db.oracle — Oracle DB connection error: [Errno 11001] getaddrinfo failed
+2026-02-27 17:37:42 [ERROR] main — Oracle DB unavailable; continuing without DB: [Errno 11001] getaddrinfo failed
+2026-02-27 17:37:42 [INFO] main — System is live and listening for MQTT attendance events.
+2026-02-27 17:37:47 [ERROR] app.services.mqtt_service — MQTT loop error: timed out
+2026-02-27 17:37:59 [INFO] main — Shutting down...
+2026-02-27 17:37:59 [INFO] app.services.mqtt_service — MQTT service stopped.
+2026-02-27 17:38:03 [INFO] main — Starting up Attendance System...
+2026-02-27 17:38:05 [ERROR] app.db.oracle — Oracle DB connection error: [Errno 11001] getaddrinfo failed
+2026-02-27 17:38:05 [ERROR] main — Oracle DB unavailable; continuing without DB: [Errno 11001] getaddrinfo failed
+2026-02-27 17:38:05 [INFO] main — System is live and listening for MQTT attendance events.
+2026-02-27 17:38:10 [ERROR] app.services.mqtt_service — MQTT loop error: timed out
+2026-02-27 17:39:32 [INFO] main — Shutting down...
+2026-02-27 17:39:32 [INFO] app.services.mqtt_service — MQTT service stopped.

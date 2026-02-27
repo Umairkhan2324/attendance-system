@@ -15,7 +15,10 @@ router = APIRouter()
 @router.get("/")
 def list_employees(request: Request):
     """List all enrolled employees."""
-    db = request.app.state.db
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise HTTPException(status_code=503, detail="Oracle DB is not configured.")
+
     employees = db.get_all_employees()
     return {"total": len(employees), "employees": employees}
 
@@ -23,34 +26,21 @@ def list_employees(request: Request):
 @router.post("/enroll", response_model=EmployeeEnrollResponse)
 def enroll_employee(body: EmployeeEnrollRequest, request: Request):
     """
-    Enroll a new employee by providing their employee code, name, and a
-    base64-encoded face photo. The face encoding is saved to Oracle DB.
+    Disabled in this build: facial enrollment is handled externally by the AI camera.
+    This API no longer stores face encodings.
     """
-    db = request.app.state.db
-    mqtt_svc = request.app.state.mqtt
-    face_svc = mqtt_svc.face_svc
-
-    try:
-        image = face_svc.decode_base64_image(body.image_base64)
-        encoding = face_svc.extract_encoding(image)
-        db.enroll_employee(body.employee_code, body.employee_name, encoding)
-
-        return EmployeeEnrollResponse(
-            success=True,
-            message=f"Employee '{body.employee_name}' enrolled successfully.",
-            employee_code=body.employee_code,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Enrollment error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Enrollment failed: {str(e)}")
+    raise HTTPException(
+        status_code=501,
+        detail="Employee facial enrollment is disabled; manage identities on the camera side.",
+    )
 
 
 @router.delete("/{employee_code}")
 def delete_employee(employee_code: str, request: Request):
     """Remove an employee from the system."""
-    db = request.app.state.db
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise HTTPException(status_code=503, detail="Oracle DB is not configured.")
 
     if employee_code not in db.employees:
         raise HTTPException(status_code=404, detail=f"Employee '{employee_code}' not found.")
@@ -65,7 +55,10 @@ def delete_employee(employee_code: str, request: Request):
 @router.post("/reload-encodings")
 def reload_encodings(request: Request):
     """Manually trigger a reload of all employee encodings from Oracle DB."""
-    db = request.app.state.db
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise HTTPException(status_code=503, detail="Oracle DB is not configured.")
+
     try:
         db.load_encodings()
         return {

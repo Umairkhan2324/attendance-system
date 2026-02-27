@@ -54,53 +54,12 @@ def download_excel(request: Request):
 
 
 @router.post("/verify-frame")
-async def verify_frame_via_api(request: Request):
+async def verify_frame_via_api() -> None:
     """
-    Manually submit a camera frame (JPEG bytes) for face verification.
-    Useful for testing without a live MQTT stream.
-    Send raw JPEG bytes in the request body.
+    Disabled in this build: face-based verification is handled upstream by the AI camera.
+    Use MQTT JSON events (employee_code / employee_name / present flag) instead.
     """
-    payload = await request.body()
-    if not payload:
-        raise HTTPException(status_code=400, detail="Empty request body. Send JPEG bytes.")
-
-    mqtt_svc = request.app.state.mqtt
-    face_svc = mqtt_svc.face_svc
-    excel_svc = mqtt_svc.excel_svc
-
-    try:
-        image = face_svc.decode_image(payload)
-        matches = face_svc.verify(image)
-
-        if not matches:
-            return {"status": "no_match", "message": "No recognized face in the image."}
-
-        results = []
-        for match in matches:
-            emp_code = match["employee_code"]
-
-            if face_svc.is_on_cooldown(emp_code):
-                results.append({
-                    "employee_code": emp_code,
-                    "status": "cooldown",
-                    "message": "Already logged recently.",
-                })
-                continue
-
-            emp_name = match["employee_name"]
-            date_str, time_str = excel_svc.log(emp_code, emp_name)
-            face_svc.set_cooldown(emp_code)
-
-            results.append({
-                "status": "verified",
-                "employee_code": emp_code,
-                "employee_name": emp_name,
-                "date": date_str,
-                "time": time_str,
-                "confidence": match["confidence"],
-            })
-
-        return {"total_faces_detected": len(matches), "results": results}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(
+        status_code=501,
+        detail="Frame-based verification is disabled. Send attendance events via MQTT.",
+    )

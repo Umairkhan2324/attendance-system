@@ -8,13 +8,15 @@ router = APIRouter()
 
 @router.get("/health", response_model=SystemStatusResponse)
 def health_check(request: Request):
-    db = request.app.state.db
+    db = getattr(request.app.state, "db", None)
     mqtt = request.app.state.mqtt
+
+    employees_loaded = len(db.employees) if db is not None else 0
 
     return SystemStatusResponse(
         status="ok",
         mqtt_connected=mqtt.is_connected,
-        employees_loaded=len(db.employees),
+        employees_loaded=employees_loaded,
         excel_file=mqtt.excel_svc.file_path,
         last_detection=mqtt.last_detection,
     )
